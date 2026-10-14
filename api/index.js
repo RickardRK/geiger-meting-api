@@ -1,7 +1,7 @@
 import app from "../app.js"
 
 // ================== 【新增】API KEY 校验与 CORS 处理 ==================
-const API_KEY = process.env.MY_API_KEY || 'DEEPSEEKISABIGBIGFISH'; // 确保与 Vercel 环境变量和 Worker 里的值一致
+const API_KEY = process.env.MY_API_KEY; 
 
 function checkApiKeyAndCors(incoming) {
     // 1. 处理 OPTIONS 预检请求
