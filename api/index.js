@@ -16,17 +16,18 @@ function checkApiKeyAndCors(incoming) {
         });
     }
 
-    // 2. 提取请求头
+    // 2. 提取请求头（【核心修复】全部转成小写）
     const headers = {};
     const len = incoming.rawHeaders.length;
     for (let i = 0; i < len; i += 2) {
-        headers[incoming.rawHeaders[i]] = incoming.rawHeaders[i + 1];
+        // 将请求头的 Key 统一转为小写，解决大小写敏感问题
+        headers[incoming.rawHeaders[i].toLowerCase()] = incoming.rawHeaders[i + 1];
     }
 
     // 3. 校验 API Key
-    const clientKey = headers['x-api-key'];
+    const clientKey = headers['x-api-key']; // 现在一定能取到大写传来的 X-API-KEY 了
     if (clientKey !== API_KEY) {
-        console.warn(`[Forbidden] 缺少正确的 X-API-KEY，请求被拒绝`);
+        console.warn(`[Forbidden] 缺少正确的 X-API-KEY，请求被拒绝。接收到的Key: ${clientKey}`);
         return new Response(JSON.stringify({ error: 'Forbidden: Invalid API Key' }), {
             status: 403,
             headers: {
