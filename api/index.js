@@ -1,5 +1,47 @@
 import app from "../app.js"
 
+// ================== 【新增】API KEY 校验与 CORS 处理 ==================
+const API_KEY = process.env.MY_API_KEY || 'your_secure_key_2026'; // 确保与 Vercel 环境变量和 Worker 里的值一致
+
+function checkApiKeyAndCors(incoming) {
+    // 1. 处理 OPTIONS 预检请求
+    if (incoming.method === 'OPTIONS') {
+        return new Response(null, {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Range, X-API-KEY'
+            }
+        });
+    }
+
+    // 2. 提取请求头
+    const headers = {};
+    const len = incoming.rawHeaders.length;
+    for (let i = 0; i < len; i += 2) {
+        headers[incoming.rawHeaders[i]] = incoming.rawHeaders[i + 1];
+    }
+
+    // 3. 校验 API Key
+    const clientKey = headers['x-api-key'];
+    if (clientKey !== API_KEY) {
+        console.warn(`[Forbidden] 缺少正确的 X-API-KEY，请求被拒绝`);
+        return new Response(JSON.stringify({ error: 'Forbidden: Invalid API Key' }), {
+            status: 403,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+
+    // 4. 校验通过，返回 null，让请求继续往下走
+    return null;
+}
+// ================== 【新增】API KEY 校验与 CORS 处理结束 ==================
+
+
 async function writeReadableStreamToWritable(stream, writable) {
     let reader = stream.getReader()
 
@@ -33,8 +75,22 @@ class NodeResponse extends Response {
         return super.clone()
     }
 }
+
 const getRequestListener = (fetchCallback) => {
     return async (incoming, outgoing) => {
+        // 【新增】在这里拦截校验
+        const blockedResponse = checkApiKeyAndCors(incoming);
+        if (blockedResponse) {
+            // 如果被拦截，直接返回 Response，不进入 Hono 框架
+            const contentType = blockedResponse.headers.get('content-type') || '';
+            outgoing.statusCode = blockedResponse.status;
+            for (const [k, v] of blockedResponse.headers) {
+                outgoing.setHeader(k, v);
+            }
+            outgoing.end(await blockedResponse.text());
+            return;
+        }
+
         const method = incoming.method || 'GET'
         const url = `http://${incoming.headers.host}${incoming.url}`
 
