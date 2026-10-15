@@ -4,6 +4,10 @@ import app from "../app.js"
 const API_KEY = process.env.MY_API_KEY; 
 
 function checkApiKeyAndCors(incoming) {
+    // 【新增】放行 /gd 代理路由，让它不带 Key 也能测
+    if (incoming.url && incoming.url.startsWith('/gd')) {
+        return null;
+    }
     // 1. 处理 OPTIONS 预检请求
     if (incoming.method === 'OPTIONS') {
         return new Response(null, {
