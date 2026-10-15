@@ -12,6 +12,29 @@ app.use('*', cors())
 app.use('*', logger())
 app.get('/api', api)
 app.get('/test', handler)
+
+// 【新增】GD 音乐台代理路由
+app.get('/gd', async (c) => {
+    const qs = new URL(c.req.url).search;
+    const gdUrl = 'https://music-api.gdstudio.xyz/api.php' + qs;
+
+    try {
+        const res = await fetch(gdUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        const body = await res.text();
+        return new Response(body, {
+            status: res.status,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (e) {
+        console.error('GD 代理失败:', e);
+        return c.json({ error: 'GD unreachable' }, 502);
+    }
+});
 app.get('/', (c) => {
 
     return c.html(`
